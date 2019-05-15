@@ -34,10 +34,7 @@ func web3proxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer resp.Body.Close()
-	if err != nil {
-		fail(err)
-		return
-	}
+
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if _, err := io.Copy(w, resp.Body); err != nil {
@@ -72,5 +69,6 @@ func main() {
 		TLSConfig: m.TLSConfig(),
 	}
 
+	log.Info("Started")
 	log.Fatal(server.ListenAndServeTLS("", ""))
 }
