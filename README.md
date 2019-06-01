@@ -18,5 +18,5 @@ web3proxy will auto generate the TLS server certificate using https://letsencryp
 
 ## Build
 
-You can build from the source or just exec with `docker run -p 443:443 adriamb/web3proxy <https_url> <web3_url>`
+You can build from the source or just exec with `docker run -p 443:443 adria0/web3proxy <https_url> <web3_url>`
 
