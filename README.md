@@ -1,5 +1,6 @@
 # web3proxy
-[![Go Report Card](https://goreportcard.com/badge/github.com/adriamb/web3proxy)](https://goreportcard.com/report/github.com/adriamb/web3proxy) [![Build Status](https://travis-ci.org/adriamb/web3proxy.svg?branch=master)](https://travis-ci.org/adriamb/web3proxy) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/adriamb/web3proxy)](https://goreportcard.com/report/github.com/adriamb/web3proxy) [![Build Status](https://github.com/adria0/web3proxy/workflows/Go/badge.svg)](https://github.com/adria0/web3proxy/actions?query=workflow%3AGo) 
+
 
 A minimalistic web3 authenticated proxy, _alla_ infura.
 
