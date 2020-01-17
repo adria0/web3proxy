@@ -9,19 +9,38 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync/atomic"
 )
 
 var rpcurl string
+var debug bool
+var opid uint64
 
 func web3proxy(w http.ResponseWriter, r *http.Request) {
 
+	var op uint64
+
 	fail := func(err error) {
 		w.Header().Set("Content-Type", "text/plain")
 		log.Error(err)
 		w.Write([]byte(err.Error()))
 	}
 
-	req, err := http.NewRequest("POST", rpcurl, r.Body)
+	var request io.Reader
+	if debug {
+		op = atomic.AddUint64(&opid, 1)
+		requestBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fail(err)
+			return
+		}
+		log.Debug("> [", op, "] '", string(requestBytes), "'")
+		request = bytes.NewReader(requestBytes)
+	} else {
+		request = r.Body
+	}
+
+	req, err := http.NewRequest("POST", rpcurl, request)
 	if err != nil {
 		fail(err)
 		return
@@ -37,54 +56,22 @@ func web3proxy(w http.ResponseWriter, r *http.Request) {
 
 	defer resp.Body.Close()
 
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if _, err := io.Copy(w, resp.Body); err != nil {
-		fail(err)
-		return
+	var response io.Reader
+	if debug {
+		responseBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fail(err)
+			return
+		}
+		log.Debug("< [", op, "] '", string(responseBytes), "'")
+		response = bytes.NewReader(responseBytes)
+	} else {
+		response = resp.Body
 	}
-}
-
-func web3proxyDebug(w http.ResponseWriter, r *http.Request) {
-
-	fail := func(err error) {
-		w.Header().Set("Content-Type", "text/plain")
-		log.Error(err)
-		w.Write([]byte(err.Error()))
-	}
-
-	request, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		fail(err)
-		return
-	}
-
-	log.Debug("> '", string(request), "'")
-	req, err := http.NewRequest("POST", rpcurl, bytes.NewReader(request))
-	if err != nil {
-		fail(err)
-		return
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fail(err)
-		return
-	}
-
-	defer resp.Body.Close()
-	response, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fail(err)
-		return
-	}
-	log.Debug("< '", string(response), "'")
 
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if _, err := io.Copy(w, bytes.NewReader(response)); err != nil {
+	if _, err := io.Copy(w, response); err != nil {
 		fail(err)
 		return
 	}
@@ -92,31 +79,31 @@ func web3proxyDebug(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	debug = os.Getenv("DEBUG") == "1"
+
 	if len(os.Args) != 3 {
 		log.Info("Usage ", os.Args[0], " externalurl rpcurl")
 		os.Exit(-1)
 	}
 
-	accessUrl, err := url.Parse(os.Args[1])
-	if err != nil || accessUrl.Scheme != "https" {
+	accessURL, err := url.Parse(os.Args[1])
+	if err != nil || accessURL.Scheme != "https" {
 		log.Error("Malformed URL ", os.Args[1])
 		os.Exit(-1)
 	}
 
 	rpcurl = os.Args[2]
 
-	if os.Getenv("DEBUG") == "1" {
+	if debug {
 		log.SetLevel(log.DebugLevel)
-		log.Debug("externalurl=", accessUrl)
+		log.Debug("externalurl=", accessURL)
 		log.Debug("rpcurl=", rpcurl)
-		http.HandleFunc(accessUrl.Path, web3proxyDebug)
-	} else {
-		http.HandleFunc(accessUrl.Path, web3proxy)
 	}
+	http.HandleFunc(accessURL.Path, web3proxy)
 
 	m := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(accessUrl.Host),
+		HostPolicy: autocert.HostWhitelist(accessURL.Host),
 		Cache:      autocert.DirCache("cache-path"),
 	}
 	server := &http.Server{
