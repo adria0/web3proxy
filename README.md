@@ -23,3 +23,6 @@ To debug set the environment variable `DEBUG=1`
 ## Docker
 
 Just exec with `docker run -p 443:443 adria0/web3proxy <https_url> <web3_url>`
+
+If you want to cache the creation of the certificate (e.g. development environments where everything is re-created from scratch) you can map the certificates folder with `-v <path_to_your_certificates_cache>/cache-path:/cache-path`
+
